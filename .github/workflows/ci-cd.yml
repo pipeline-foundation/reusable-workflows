@@ -7,9 +7,10 @@ on:
     tags-ignore:
       - '**'
     paths:
-      - '.github/workflows/add-dbot.yml'
-      - '.github/workflows/create-forks.yml'
+      - '.github/workflows/**'
       - 'CHANGELOG.md'
+    paths-ignore:
+      - '.github/workflows/ci-cd.yml'
 
 jobs:
   ci-cd:
@@ -34,7 +35,8 @@ jobs:
 
           echo "::set-output name=is_origin::$(echo $IS_ORIGIN)"
 
-      - name: GitHub tag generator
+      - if: steps.repo_determiner.outputs.is_origin == 'true'
+        name: GitHub tag generator
         id: tag_generator
         uses: mathieudutour/github-tag-action@v5
         with: 
