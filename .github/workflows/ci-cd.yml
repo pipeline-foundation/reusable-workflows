@@ -56,7 +56,7 @@ jobs:
         run: |
           PACKAGE_VERSION="${{ steps.tag_generator.outputs.new_version }}"
           RELEASE_TAG="${{ steps.tag_generator.outputs.new_tag }}"
-          PREVIOUS_TAG="${{ steps.tag_generator.outputs.previous_tag }}"
+          PREVIOUS_TAG="v${{ steps.tag_generator.outputs.previous_tag }}"
           RELEASE_TITLE="Release for $RELEASE_TAG"
           START_LINE=$(( $( grep -n "## $RELEASE_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) + 2 ))
           END_LINE=$(( $( grep -n "## $PREVIOUS_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) - 2 ))
