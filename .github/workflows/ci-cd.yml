@@ -9,8 +9,7 @@ on:
     paths:
       - '.github/workflows/**'
       - 'CHANGELOG.md'
-    paths-ignore:
-      - '.github/workflows/ci-cd.yml'
+      - '!.github/workflows/ci-cd.yml'
 
 jobs:
   ci-cd:
