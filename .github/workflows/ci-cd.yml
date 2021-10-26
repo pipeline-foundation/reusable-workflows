@@ -63,7 +63,7 @@ jobs:
           RELEASE_NOTES=$(echo $'### Changelog:\n\n' "$( sed -n "$START_LINE,$END_LINE"p CHANGELOG.md )")
 
           gh release create $RELEASE_TAG \
-          --title $RELEASE_TITLE \
+          --title "$RELEASE_TITLE" \
           --notes "$RELEASE_NOTES"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
