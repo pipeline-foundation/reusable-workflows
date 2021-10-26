@@ -21,15 +21,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pipeline data gatherer
-        id: data_gatherer
-        run: |
-          # Get default branch
-          REPO="${{ github.repository }}"
-          DEFAULT_BRANCH=`(curl -X GET https://api.github.com/repos/$REPO) | jq '.default_branch'`
-
-          echo "::set-output name=default_branch::$(echo $DEFAULT_BRANCH)"
-
       - name: Project version/deploy determiner
         id: repo_determiner
         run: |
@@ -71,7 +62,8 @@ jobs:
       - if: steps.tag_generator.outputs.new_version != '' && steps.repo_determiner.outputs.is_origin == 'true'
         name: Point new tag to major ref
         run: |
-          git checkout ${{ steps.data_gatherer.outputs.default_branch }}
-
+          git checkout main
+          git config --global user.email "${{ secrets.PF_EMAIL }}"
+          git config --global user.name "${{ secrets.PF_USERNAME }}"
           git tag -f -a v1 -m "point v1 to ${{ steps.tag_generator.outputs.new_tag }}"
           git push -f origin v1
