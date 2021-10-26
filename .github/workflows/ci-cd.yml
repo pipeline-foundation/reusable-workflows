@@ -1,0 +1,77 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '**'
+    paths:
+      - '.github/workflows/add-dbot.yml'
+      - '.github/workflows/create-forks.yml'
+      - 'CHANGELOG.md'
+
+jobs:
+  ci-cd:
+    name: Continuous Integration
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pipeline data gatherer
+        id: data_gatherer
+        run: |
+          # Get default branch
+          REPO="${{ github.repository }}"
+          DEFAULT_BRANCH=`(curl -X GET https://api.github.com/repos/$REPO) | jq '.default_branch'`
+
+          echo "::set-output name=default_branch::$(echo $DEFAULT_BRANCH)"
+
+      - name: Project version/deploy determiner
+        id: repo_determiner
+        run: |
+          ORIGINAL_REPO="pipeline-foundation/reusable-workflows"
+          CURRENT_REPO="${{ github.repository }}"
+          IS_ORIGIN="false"
+
+          if [ "$CURRENT_REPO" == "$ORIGINAL_REPO" ]; then
+            IS_ORIGIN="true"
+          fi
+
+          echo "::set-output name=is_origin::$(echo $IS_ORIGIN)"
+
+      - name: GitHub tag generator
+        id: tag_generator
+        uses: mathieudutour/github-tag-action@v5
+        with: 
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: ${{ steps.data_gatherer.outputs.default_branch }}
+          default_bump: false
+
+      - if: steps.tag_generator.outputs.new_version != '' && steps.repo_determiner.outputs.is_origin == 'true'
+        name: Create and publish release
+        run: |
+          PACKAGE_VERSION="${{ steps.tag_generator.outputs.new_version }}"
+          RELEASE_TAG="${{ steps.tag_generator.outputs.new_tag }}"
+          PREVIOUS_TAG="${{ steps.tag_generator.outputs.previous_tag }}"
+          RELEASE_TITLE="Release for $RELEASE_TAG"
+          START_LINE=$(( $( grep -n "## $RELEASE_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) + 2 ))
+          END_LINE=$(( $( grep -n "## $PREVIOUS_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) - 2 ))
+          RELEASE_NOTES=$(echo $'### Changelog:\n\n' "$( sed -n "$START_LINE,$END_LINE"p CHANGELOG.md )")
+
+          gh release create $RELEASE_TAG \
+          --title $RELEASE_TITLE \
+          --notes "$RELEASE_NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - if: steps.tag_generator.outputs.new_version != '' && steps.repo_determiner.outputs.is_origin == 'true'
+        name: Point new tag to major ref
+        run: |
+          git checkout ${{ steps.data_gatherer.outputs.default_branch }}
+
+          git tag -f -a v1 -m "point v1 to ${{ steps.tag_generator.outputs.new_tag }}"
+          git push -f origin v1
